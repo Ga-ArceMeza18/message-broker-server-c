@@ -8,6 +8,7 @@ typedef struct group_member {
     int client_fd; // Descriptor del socket del cliente
     long last_heartbeat; // Último momento en que se recibió actividad o señal de vida del consumidor
     int* owned_partitions; // Particiones actualmente asignadas al consumidor
+    int owned_partition_count; // Número de particiones actualmente asignadas al consumidor
 } group_member_t;
 
 #endif // GROUP_MEMBER_T_H
