@@ -92,6 +92,7 @@ log_status_t log_wait_hw(partition_log_t* log, long offset, int timeout_ms);
 log_status_t log_flush(partition_log_t* log);
 
 // Consultas
+bool log_is_leader(partition_log_t* log);
 long log_next_offset(partition_log_t* log);
 long log_high_watermark(partition_log_t* log);
 long log_start_offset(partition_log_t* log);

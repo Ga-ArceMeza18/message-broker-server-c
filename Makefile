@@ -3,7 +3,7 @@ CFLAGS = -Wall -Wextra -g -pthread -Iinclude
 CLIENT_SRC = src/mbcli.c src/mbbench.c
 BROKER_SRC = $(filter-out $(CLIENT_SRC),$(wildcard src/*.c))
 
-all: build/brokerd build/mbcli build/mbbench build/test_cluster_metadata build/test_message build/test_partition_log build/test_failure_detector build/test_consumer_group
+all: build/brokerd build/mbcli build/mbbench build/test_message build/test_partition_log build/test_topic build/test_failure_detector build/test_consumer_group
 
 build/brokerd: $(BROKER_SRC) include/*.h
 	@mkdir -p build
@@ -17,9 +17,12 @@ build/mbbench: src/mbbench.c src/protocol.c include/protocol.h
 	@mkdir -p build
 	$(CC) $(CFLAGS) src/mbbench.c src/protocol.c -o $@
 
-build/test_cluster_metadata: tests/test_cluster_metadata.c src/cluster_metadata.c src/topic_stub.c include/*.h
+# Módulos de almacenamiento que usan los tópicos
+STORAGE_SRC = src/topic.c src/partition_log.c src/message.c
+
+build/test_topic: tests/test_topic.c src/cluster_metadata.c $(STORAGE_SRC) include/*.h
 	@mkdir -p build
-	$(CC) $(CFLAGS) tests/test_cluster_metadata.c src/cluster_metadata.c src/topic_stub.c -o $@
+	$(CC) $(CFLAGS) tests/test_topic.c src/cluster_metadata.c $(STORAGE_SRC) -o $@
 
 build/test_message: tests/test_message.c src/message.c include/message.h
 	@mkdir -p build
@@ -37,10 +40,10 @@ build/test_consumer_group: tests/test_consumer_group.c src/consumer_group_t.c in
 	@mkdir -p build
 	$(CC) $(CFLAGS) tests/test_consumer_group.c src/consumer_group_t.c -o $@
 
-test: build/test_cluster_metadata build/test_message build/test_partition_log build/test_failure_detector build/test_consumer_group
-	./build/test_cluster_metadata
+test: build/test_message build/test_partition_log build/test_topic build/test_failure_detector build/test_consumer_group
 	./build/test_message
 	./build/test_partition_log
+	./build/test_topic
 	./build/test_failure_detector
 	./build/test_consumer_group
 
