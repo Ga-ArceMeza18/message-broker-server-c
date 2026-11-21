@@ -45,7 +45,7 @@ test: build/test_cluster_metadata build/test_message build/test_partition_log bu
 	./build/test_consumer_group
 
 run: build/brokerd
-	mpirun --oversubscribe -np 3 ./build/brokerd 9000 data
+	mpirun -np 3 ./build/brokerd 9000 data
 
 clean:
 	rm -rf build data

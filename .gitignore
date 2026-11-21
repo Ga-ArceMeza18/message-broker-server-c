@@ -57,3 +57,4 @@ dkms.conf
 # Other files and directories to ignore
 /bin
 /build
+/data
