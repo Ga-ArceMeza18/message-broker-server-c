@@ -4,6 +4,7 @@
 #include <pthread.h>
 #include <stdbool.h>
 
+#include "cluster_metadata.h"
 #include "request_queue.h"
 
 #define BROKER_QUEUE_CAPACITY 128
@@ -25,30 +26,6 @@ typedef enum {
     BROKER_STATE_SHUTTING_DOWN
 } broker_state_t;
 
-typedef struct cluster_metadata cluster_metadata_t;
-
-// message_config: struct to represent a message in the broker
-// values: offset, timestamp, key_size, key, value_size, value
-typedef struct {
-    int offset;
-    long timestamp;
-    int key_size;
-    char *key;
-    int value_size;
-    void *value;
-} message_t;
-
-// partition_config: basic data about a partition in the broker
-// values: partition_id, leader_rank, replica_ranks, next_offset, highest_offset, storage_path
-typedef struct {
-    int partition_id;
-    int leader_rank;
-    int *replica_ranks;
-    int next_offset;
-    int highest_offset;
-    char *storage_path;
-} partition_t;
-
 // mpi_config: manager of outgoing messages to other brokers via MPI
 typedef struct {
     int dest;
@@ -65,8 +42,6 @@ typedef struct {
 
     int rank;
     char *storage_path;
-    partition_t *partitions;
-    int num_partitions;
 
     // comm: broker state and synchronization primitives
     broker_state_t state;
@@ -105,14 +80,5 @@ int broker_request_shutdown(broker_t *broker);
 int broker_shutdown(broker_t *broker);
 void broker_destroy(broker_t *broker);
 broker_state_t broker_get_state(broker_t *broker);
-
-/*      PARTITION FUNCTIONS        */
-int leader_of_partition(broker_t *broker, int partition_id, int N);
-int get_partition_leader(broker_t *broker, int partition_id);
-int replica_of_partition(broker_t *broker, int partition_id, int N);
-int get_replica_of_partition(broker_t *broker, int partition_id, int replica_index);
-int enroll_producer(broker_t *broker, char *producer_key);
-int send_message(broker_t *broker, int partition_id, message_t *message);
-int create_a_partition(partition_t *partition, int partition_id, int leader_rank, int *replica_ranks, int next_offset, int highest_offset, char *storage_path);
 
 #endif
