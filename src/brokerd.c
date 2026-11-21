@@ -1,4 +1,4 @@
-#include <mpi.h>
+#include <openmpi/mpi.h>
 #include <stdio.h>
 #include <stdlib.h>
 
