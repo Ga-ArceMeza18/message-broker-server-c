@@ -1136,8 +1136,21 @@ static void handle_produce(broker_t *broker, const request_t *request, response_
     int partition_id = topic_partition_for_key(topic, request->key, key_size);
     partition_t *partition = topic_get_partition(topic, partition_id);
 
-    if (partition == NULL || partition->leader_rank != broker->rank || partition->log == NULL) {
-        snprintf(response->text_info, sizeof(response->text_info), "Partition leader is not available on this broker");
+    if (partition == NULL) {
+        snprintf(response->text_info, sizeof(response->text_info), "Partition %d does not exist", partition_id);
+        goto done;
+    }
+
+    if (partition->leader_rank != broker->rank) {
+        snprintf(response->text_info, sizeof(response->text_info),
+            "Partition %d is led by broker %d; request received by broker %d",
+            partition_id, partition->leader_rank, broker->rank);
+        goto done;
+    }
+
+    if (partition->log == NULL) {
+        snprintf(response->text_info, sizeof(response->text_info),
+            "Partition %d has no local log on broker %d", partition_id, broker->rank);
         goto done;
     }
 
