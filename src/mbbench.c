@@ -1,4 +1,3 @@
-/* Habilita CLOCK_MONOTONIC y funciones POSIX/GNU en C23 */
 #define _GNU_SOURCE
 
 #include "protocol.h"
