@@ -22,21 +22,17 @@ static int find_member_index(consumer_group_t* group, int member_id) {
 
 // Genera el siguiente identificador disponible.
 static int generate_member_id(consumer_group_t* group) {
-    int candidate = 1;
+    if (group->next_member_id <= 0) return -1;
 
-    while (candidate > 0) {
-        if (find_member_index(group, candidate) == -1) {
-            return candidate;
-        }
+    int id = group->next_member_id;
 
-        if (candidate == INT_MAX) {
-            break;
-        }
-
-        candidate++;
+    if (group->next_member_id == INT_MAX) {
+        group->next_member_id = 0;
+    } else {
+        group->next_member_id++;
     }
 
-    return -1;
+    return id;
 }
 
 // Aumenta la capacidad del arreglo de miembros. Debe llamarse con el mutex adquirido.
@@ -141,6 +137,7 @@ int group_init(consumer_group_t* group, const char* group_id, int partition_coun
     }
 
     group->generation = 0;
+    group->next_member_id = 1;
     group->partition_count = partition_count;
 
     group->members = NULL;
@@ -300,6 +297,55 @@ int group_heartbeat(consumer_group_t* group, int member_id) {
     pthread_mutex_unlock(&group->lock);
 
     return 0;
+}
+
+
+// Elimina los miembros que dejaron de enviar heartbeats.
+int group_expire_members(consumer_group_t* group, long timeout_seconds) {
+
+    if (group == NULL || timeout_seconds <= 0) {
+        return -1;
+    }
+
+    pthread_mutex_lock(&group->lock);
+
+    long now = (long)time(NULL);
+    int expired_count = 0;
+    int i = 0;
+
+    while (i < group->member_count) {
+
+        group_member_t* member = &group->members[i];
+
+        // Comprueba si el miembro superó el tiempo permitido.
+        if (now >= member->last_heartbeat && now - member->last_heartbeat >= timeout_seconds) {
+
+            // Liberar las particiones asignadas al miembro.
+            free(member->owned_partitions);
+
+            // Desplazar los miembros restantes.
+            for (int j = i; j < group->member_count - 1; j++) {
+                group->members[j] = group->members[j + 1];
+            }
+
+            group->member_count--;
+            expired_count++;
+
+            // No incrementamos i porque ahora hay otro miembro
+            // ocupando la posición actual.
+        } else {
+            i++;
+        }
+    }
+
+    // Solo realizar rebalanceo si realmente hubo expiraciones.
+    if (expired_count > 0) {
+        rebalance_locked(group);
+    }
+
+    pthread_mutex_unlock(&group->lock);
+
+    return expired_count;
 }
 
 // Redistribuye las particiones entre los miembros.

@@ -9,6 +9,7 @@
 typedef struct {
     char* group_id; // Identificador único del grupo de consumidores
     int generation; // Versión del estado del grupo. Permite identificar cambios de membresía y asignación
+    int next_member_id; // Identificador único para el próximo miembro que se una al grupo
     int* assignment; // Representa la asignación de particiones a los miembros
     long* committed_offsets; // Guarda los offsets confirmados por el grupo
     pthread_mutex_t lock; // Protege el estado compartido del grupo frente a accesos concurrentes
@@ -28,6 +29,10 @@ void group_destroy(consumer_group_t* group);
 int group_join(consumer_group_t* group, int client_fd, int* member_id);
 int group_leave(consumer_group_t* group, int member_id);
 int group_heartbeat(consumer_group_t* group, int member_id);
+
+// Elimina miembros que superaron el tiempo máximo sin heartbeat.
+// Retorna la cantidad de miembros eliminados o -1 si ocurre un error.
+int group_expire_members(consumer_group_t* group, long timeout_seconds);
 
 // Administracion de particiones
 int group_rebalance(consumer_group_t* group);
