@@ -109,59 +109,59 @@ opts->partition_id = -1;
 opts->offset = -1L;
 opts->broker_id = -1;
 
-    for (int i = 1; i < argc; i++) {
-        const char *arg = argv[i];
+for (int i = 1; i < argc; i++) {
+    const char *arg = argv[i];
 
-    if (strcmp(arg, "--host") == 0 && i + 1 < argc) {
-        snprintf(opts->host, sizeof(opts->host), "%s", argv[++i]);
-    } else if (strcmp(arg, "--port") == 0 && i + 1 < argc) {
-        if (!parse_int_arg(argv[++i], &opts->port))
-            return false;
-
-    } else if (strcmp(arg, "--topic") == 0 && i + 1 < argc) {
-        snprintf(opts->topic, sizeof(opts->topic), "%s", argv[++i]);
-    } else if (strcmp(arg, "--group") == 0 && i + 1 < argc) {
-        snprintf(opts->group, sizeof(opts->group), "%s", argv[++i]);
-    } else if (strcmp(arg, "--key") == 0 && i + 1 < argc) {
-        snprintf(opts->key, sizeof(opts->key), "%s", argv[++i]);
-    } else if (strcmp(arg, "--value") == 0 && i + 1 < argc) {
-        snprintf(opts->value, sizeof(opts->value), "%s", argv[++i]);
-    } else if (strcmp(arg, "--partitions") == 0 && i + 1 < argc) {
-        if (!parse_int_arg(argv[++i], &opts->partitions))
-            return false;
-
-    } else if (strcmp(arg, "--replication") == 0 && i + 1 < argc) {
-        if (!parse_int_arg(argv[++i], &opts->replication_factor))
-            return false;
-
-    } else if (strcmp(arg, "--broker-id") == 0 && i + 1 < argc) {
-        if (!parse_int_arg(argv[++i], &opts->broker_id))
-            return false;
-
-    } else if (strcmp(arg, "--partition") == 0 && i + 1 < argc) {
-        if (!parse_int_arg(argv[++i], &opts->partition_id))
-            return false;
-
-    } else if (strcmp(arg, "--offset") == 0 && i + 1 < argc) {
-        if (!parse_long_arg(argv[++i], &opts->offset))
-            return false;
-
-    } else if (strcmp(arg, "--acks") == 0 && i + 1 < argc) {
-        if (!parse_acks(argv[++i], &opts->acks))
-            return false;
-
-    } else if (strcmp(arg, "--from-beginning") == 0) {
-        opts->from_beginning = true;
-    } else if (arg[0] == '-') {
+if (strcmp(arg, "--host") == 0 && i + 1 < argc) {
+    snprintf(opts->host, sizeof(opts->host), "%s", argv[++i]);
+} else if (strcmp(arg, "--port") == 0 && i + 1 < argc) {
+    if (!parse_int_arg(argv[++i], &opts->port))
         return false;
 
-    } else if (opts->cmd[0] == '\0') {
-        snprintf(opts->cmd, sizeof(opts->cmd), "%s", arg);
-
-    } else {
+} else if (strcmp(arg, "--topic") == 0 && i + 1 < argc) {
+    snprintf(opts->topic, sizeof(opts->topic), "%s", argv[++i]);
+} else if (strcmp(arg, "--group") == 0 && i + 1 < argc) {
+    snprintf(opts->group, sizeof(opts->group), "%s", argv[++i]);
+} else if (strcmp(arg, "--key") == 0 && i + 1 < argc) {
+    snprintf(opts->key, sizeof(opts->key), "%s", argv[++i]);
+} else if (strcmp(arg, "--value") == 0 && i + 1 < argc) {
+    snprintf(opts->value, sizeof(opts->value), "%s", argv[++i]);
+} else if (strcmp(arg, "--partitions") == 0 && i + 1 < argc) {
+    if (!parse_int_arg(argv[++i], &opts->partitions))
         return false;
 
-    }
+} else if (strcmp(arg, "--replication") == 0 && i + 1 < argc) {
+    if (!parse_int_arg(argv[++i], &opts->replication_factor))
+        return false;
+
+} else if (strcmp(arg, "--broker-id") == 0 && i + 1 < argc) {
+    if (!parse_int_arg(argv[++i], &opts->broker_id))
+        return false;
+
+} else if (strcmp(arg, "--partition") == 0 && i + 1 < argc) {
+    if (!parse_int_arg(argv[++i], &opts->partition_id))
+        return false;
+
+} else if (strcmp(arg, "--offset") == 0 && i + 1 < argc) {
+    if (!parse_long_arg(argv[++i], &opts->offset))
+        return false;
+
+} else if (strcmp(arg, "--acks") == 0 && i + 1 < argc) {
+    if (!parse_acks(argv[++i], &opts->acks))
+        return false;
+
+} else if (strcmp(arg, "--from-beginning") == 0) {
+    opts->from_beginning = true;
+} else if (arg[0] == '-') {
+    return false;
+
+} else if (opts->cmd[0] == '\0') {
+    snprintf(opts->cmd, sizeof(opts->cmd), "%s", arg);
+
+} else {
+    return false;
+
+}
 
   }
 

@@ -93,18 +93,16 @@ static bool parse_acks(const char *s, proto_acks_t *out)
 //Convierte una cadena a entero positivo 
 static bool parse_pos_int(const char *s, int *out)
 {
-if (s == NULL || s[0] == '\0')
-    return false;
+    if (s == NULL || s[0] == '\0')
+        return false;
 
     char *end = NULL;
     long v = strtol(s, &end, 10);
-
-if (*end != '\0' || v <= 0 || v > 10000000)
-    return false;
+    if (*end != '\0' || v <= 0 || v > 10000000)
+        return false;
 
     *out = (int)v;
-
-return true;
+    return true;
 }
 
 // Lee y valida los argumentos de linea de comandos
