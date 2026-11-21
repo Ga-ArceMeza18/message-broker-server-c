@@ -6,7 +6,7 @@
 #include <pthread.h>
 #include "group_member_t.h"
 
-typedef struct consumer_group {
+typedef struct {
     char* group_id; // Identificador único del grupo de consumidores
     int generation; // Versión del estado del grupo. Permite identificar cambios de membresía y asignación
     int* assignment; // Representa la asignación de particiones a los miembros

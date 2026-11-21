@@ -3,7 +3,7 @@
 #include "broker.h"
 
 #include <errno.h>
-#include <mpi.h>
+#include <openmpi/mpi.h>
 #include <netinet/in.h>
 #include <poll.h>
 #include <stdio.h>

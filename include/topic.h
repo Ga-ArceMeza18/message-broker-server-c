@@ -14,7 +14,7 @@ typedef struct {
     partition_log_t *log;  // comm: null if leader_rank != my_rank
 } partition_t;
 
-typedef struct topic {
+typedef struct {
     char        *name;
     int          num_partitions;
     int          replication_factor;
