@@ -689,6 +689,15 @@ static void handle_replica_sync(broker_t *broker, int source, const replica_sync
             fprintf(stderr, "[broker %d] Error iniciando sincronizacion de replica %d\n", broker->rank, source);
         }
     } else {
+        // La replica informa que alcanzo el offset actual del lider.
+        if (broker->failure_detector_initialized &&
+            !failure_detector_is_down(&broker->failure_detector, source)) {
+
+            if (log_set_replica_in_sync(partition->log, found, true) != LOG_OK) {
+                fprintf(stderr, "[broker %d] Error incorporando replica %d al ISR\n", broker->rank, source);
+            }
+        }
+
         replica_hw_t hw = {0};
 
         snprintf(hw.topic, sizeof(hw.topic), "%s", topic->name);
