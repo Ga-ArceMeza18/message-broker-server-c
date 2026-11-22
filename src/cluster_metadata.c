@@ -16,6 +16,27 @@ static topic_t *find_locked(const cluster_metadata_t *m, const char *name) {
     return NULL;
 }
 
+// Valida que los brokers del ISR sean válidos y no estén duplicados.
+static int validate_isr(const metadata_update_t *u) {
+    if (!u || u->isr_count <= 0 || u->isr_count > MD_MAX_REPLICAS) {
+        return -1;
+    }
+
+    for (int i = 0; i < u->isr_count; i++) {
+        if (u->isr[i] < 0) {
+            return -1;
+        }
+
+        for (int j = 0; j < i; j++) {
+            if (u->isr[i] == u->isr[j]) {
+                return -1;
+            }
+        }
+    }
+
+    return 0;
+}
+
 // helper: grow the topics array if needed (assumes lock is held)
 static int grow_locked(cluster_metadata_t *m) {
     if (m->num_topics < m->topics_capacity) return 0;
@@ -105,11 +126,36 @@ topic_t *find_topic(cluster_metadata_t *m, const char *name) {
 int apply_update(cluster_metadata_t *m, const metadata_update_t *u) {
     if (!m || !u) return -1;
 
+    // Validar que el nombre del tópico esté terminado correctamente.
+    if (strnlen(u->topic, MD_MAX_TOPIC_NAME) >= MD_MAX_TOPIC_NAME) {
+        return -1;
+    }
+
+    // Validar el tipo de actualización.
+    if (u->type != MD_CREATE_TOPIC && u->type != MD_LEADER_CHANGE && u->type != MD_ISR_CHANGE) {
+        return -1;
+    }
+
+    // Validar los datos específicos de cada actualización.
+    if (u->type == MD_LEADER_CHANGE && u->leader_rank < 0) {
+        return -1;
+    }
+
+    if (u->type == MD_ISR_CHANGE && validate_isr(u) != 0) {
+        return -1;
+    }
+
     pthread_rwlock_wrlock(&m->lock);
 
     if (u->version <= m->version) {       
         pthread_rwlock_unlock(&m->lock);
         return 1;
+    }
+
+    // No aplicar actualizaciones si falta una versión anterior.
+    if (u->version != m->version + 1) {
+        pthread_rwlock_unlock(&m->lock);
+        return -1;
     }
 
     int rc = -1;
@@ -137,9 +183,11 @@ int apply_update(cluster_metadata_t *m, const metadata_update_t *u) {
     case MD_ISR_CHANGE: {
         topic_t *t = find_locked(m, u->topic);
         partition_t *p = t ? topic_get_partition(t, u->partition_id) : NULL;
-        if (p && u->isr_count >= 0 && u->isr_count <= t->replication_factor) {
-            for (int i = 0; i < t->replication_factor; i++)
+
+        if (p && u->isr_count <= t->replication_factor) {
+            for (int i = 0; i < t->replication_factor; i++) {
                 p->isr_ranks[i] = (i < u->isr_count) ? u->isr[i] : -1;
+            }
             rc = 0;
         }
         break;

@@ -52,6 +52,7 @@ typedef struct {
     int replication_factor;
     int broker_id;
     int partition_id;
+    int member_id;
     long offset;
     proto_acks_t acks;
     bool from_beginning;
@@ -64,6 +65,7 @@ request_t;
 typedef struct {
     int status;
     int partition_id;
+    int member_id;
     long offset;
     size_t data_len;
     char text_info[PROTO_MAX_TEXT_INFO];

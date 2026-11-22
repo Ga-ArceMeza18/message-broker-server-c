@@ -1054,6 +1054,49 @@ log_status_t log_replica_ack(partition_log_t* log, int replica, long end_offset)
     return status;
 }
 
+
+log_status_t log_replica_reset_progress(partition_log_t *log, int replica, long end_offset) {
+    if (log == NULL) return LOG_ERR_ARGS;
+
+    pthread_mutex_lock(&log->lock);
+
+    if (!log->is_leader || replica < 0 || replica >= log->num_replicas ||
+        end_offset < log->log_start_offset || end_offset > log->next_offset) {
+        pthread_mutex_unlock(&log->lock);
+        return LOG_ERR_ARGS;
+    }
+
+    // La replica debe demostrar nuevamente que esta sincronizada.
+    log->replica_in_sync[replica] = false;
+
+    // Reemplazar el progreso anterior por el offset comunicado.
+    log->replica_end_offsets[replica] = end_offset;
+
+    recompute_hw_locked(log);
+
+    pthread_mutex_unlock(&log->lock);
+    return LOG_OK;
+}
+
+log_status_t log_replica_progress(partition_log_t *log, int replica, long *end_offset) {
+    if (log == NULL || end_offset == NULL) {
+        return LOG_ERR_ARGS;
+    }
+
+    pthread_mutex_lock(&log->lock);
+
+    if (!log->is_leader || replica < 0 || replica >= log->num_replicas) {
+        pthread_mutex_unlock(&log->lock);
+        return LOG_ERR_ARGS;
+    }
+
+    *end_offset = log->replica_end_offsets[replica];
+
+    pthread_mutex_unlock(&log->lock);
+    return LOG_OK;
+}
+
+
 log_status_t log_set_replica_in_sync(partition_log_t* log, int replica, bool in_sync) {
     if (log == NULL) {
         return LOG_ERR_ARGS;
@@ -1072,6 +1115,23 @@ log_status_t log_set_replica_in_sync(partition_log_t* log, int replica, bool in_
 
     pthread_mutex_unlock(&log->lock);
     return status;
+}
+
+bool log_all_replicas_in_sync(partition_log_t *log) {
+    if (log == NULL) return false;
+
+    pthread_mutex_lock(&log->lock);
+
+    bool ready = log->is_leader && !log->closed;
+
+    for (int i = 0; ready && i < log->num_replicas; i++) {
+        if (!log->replica_in_sync[i]) {
+            ready = false;
+        }
+    }
+
+    pthread_mutex_unlock(&log->lock);
+    return ready;
 }
 
 void log_advance_hw(partition_log_t* log, long high_watermark) {
