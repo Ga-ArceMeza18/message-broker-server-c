@@ -37,12 +37,17 @@ build/test_consumer_group: tests/test_consumer_group.c src/consumer_group_t.c in
 	@mkdir -p build
 	$(CC) $(CFLAGS) tests/test_consumer_group.c src/consumer_group_t.c -o $@
 
-test: build/test_cluster_metadata build/test_message build/test_partition_log build/test_failure_detector build/test_consumer_group
+build/test_determinism: tests/test_determinism.c src/protocol.c src/message.c src/cluster_metadata.c src/topic_stub.c src/consumer_group_t.c include/*.h
+	@mkdir -p build
+	$(CC) $(CFLAGS) tests/test_determinism.c src/protocol.c src/message.c src/cluster_metadata.c src/topic_stub.c src/consumer_group_t.c -o $@
+
+test: build/test_cluster_metadata build/test_message build/test_partition_log build/test_failure_detector build/test_consumer_group build/test_determinism
 	./build/test_cluster_metadata
 	./build/test_message
 	./build/test_partition_log
 	./build/test_failure_detector
 	./build/test_consumer_group
+	./build/test_determinism
 
 run: build/brokerd
 	mpirun -np 3 ./build/brokerd 9000 data
