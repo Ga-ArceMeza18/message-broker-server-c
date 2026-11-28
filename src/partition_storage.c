@@ -1,3 +1,7 @@
+// partition_storage.c - Apertura y cierre de los logs de las particiones locales
+
+#define _POSIX_C_SOURCE 200809L
+
 #include "partition_storage.h"
 #include "partition_log.h"
 

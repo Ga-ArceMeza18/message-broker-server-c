@@ -1217,6 +1217,14 @@ log_status_t log_flush(partition_log_t* log) {
     return status;
 }
 
+bool log_is_leader(partition_log_t* log) {
+    pthread_mutex_lock(&log->lock);
+    bool value = log->is_leader;
+    pthread_mutex_unlock(&log->lock);
+
+    return value;
+}
+
 long log_next_offset(partition_log_t* log) {
     pthread_mutex_lock(&log->lock);
     long value = log->next_offset;

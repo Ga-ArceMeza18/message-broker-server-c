@@ -1,9 +1,14 @@
-CFLAGS = -Wall -Wextra -g -pthread -Iinclude
+CFLAGS = -std=c2x -Wall -Wextra -pedantic -O2 -g -pthread -Iinclude -D_POSIX_C_SOURCE=200809L
 
 CLIENT_SRC = src/mbcli.c src/mbbench.c
 BROKER_SRC = $(filter-out $(CLIENT_SRC),$(wildcard src/*.c))
 
-all: build/brokerd build/mbcli build/mbbench build/test_cluster_metadata build/test_message build/test_partition_log build/test_failure_detector build/test_consumer_group
+# Módulos de almacenamiento que usan los tópicos
+STORAGE_SRC = src/topic.c src/partition_log.c src/message.c
+
+TESTS = build/test_cluster_metadata build/test_message build/test_partition_log build/test_topic build/test_failure_detector build/test_consumer_group build/test_determinism
+
+all: build/brokerd build/mbcli build/mbbench $(TESTS)
 
 build/brokerd: $(BROKER_SRC) include/*.h
 	@mkdir -p build
@@ -17,9 +22,9 @@ build/mbbench: src/mbbench.c src/protocol.c include/protocol.h
 	@mkdir -p build
 	$(CC) $(CFLAGS) src/mbbench.c src/protocol.c -o $@
 
-build/test_cluster_metadata: tests/test_cluster_metadata.c src/cluster_metadata.c src/topic_stub.c include/*.h
+build/test_topic: tests/test_topic.c src/cluster_metadata.c $(STORAGE_SRC) include/*.h
 	@mkdir -p build
-	$(CC) $(CFLAGS) tests/test_cluster_metadata.c src/cluster_metadata.c src/topic_stub.c -o $@
+	$(CC) $(CFLAGS) tests/test_topic.c src/cluster_metadata.c $(STORAGE_SRC) -o $@
 
 build/test_message: tests/test_message.c src/message.c include/message.h
 	@mkdir -p build
@@ -37,14 +42,19 @@ build/test_consumer_group: tests/test_consumer_group.c src/consumer_group_t.c in
 	@mkdir -p build
 	$(CC) $(CFLAGS) tests/test_consumer_group.c src/consumer_group_t.c -o $@
 
-build/test_determinism: tests/test_determinism.c src/protocol.c src/message.c src/cluster_metadata.c src/topic_stub.c src/consumer_group_t.c include/*.h
+build/test_cluster_metadata: tests/test_cluster_metadata.c src/cluster_metadata.c $(STORAGE_SRC) include/*.h
 	@mkdir -p build
-	$(CC) $(CFLAGS) tests/test_determinism.c src/protocol.c src/message.c src/cluster_metadata.c src/topic_stub.c src/consumer_group_t.c -o $@
+	$(CC) $(CFLAGS) tests/test_cluster_metadata.c src/cluster_metadata.c $(STORAGE_SRC) -o $@
 
-test: build/test_cluster_metadata build/test_message build/test_partition_log build/test_failure_detector build/test_consumer_group build/test_determinism
+build/test_determinism: tests/test_determinism.c src/protocol.c src/cluster_metadata.c src/consumer_group_t.c $(STORAGE_SRC) include/*.h
+	@mkdir -p build
+	$(CC) $(CFLAGS) tests/test_determinism.c src/protocol.c src/cluster_metadata.c src/consumer_group_t.c $(STORAGE_SRC) -o $@
+
+test: $(TESTS)
 	./build/test_cluster_metadata
 	./build/test_message
 	./build/test_partition_log
+	./build/test_topic
 	./build/test_failure_detector
 	./build/test_consumer_group
 	./build/test_determinism

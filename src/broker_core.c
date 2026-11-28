@@ -1143,6 +1143,28 @@ static void handle_produce(broker_t *broker, const request_t *request, response_
 
     int key_size = (int)strlen(request->key);
     int partition_id = topic_partition_for_key(topic, request->key, key_size);
+
+    // Sin clave cualquier partición sirve, pero este broker solo puede escribir
+    // en las que lidera. El turno se reparte entre esas para que queden parejas
+    if (key_size == 0) {
+        int local = 0;
+
+        for (int i = 0; i < topic->num_partitions; i++) {
+            if (partition_is_leader(&topic->partitions[i], broker->rank)) {
+                local++;
+            }
+        }
+
+        int skip = local > 0 ? partition_id % local : 0;
+
+        for (int i = 0; local > 0 && i < topic->num_partitions; i++) {
+            if (partition_is_leader(&topic->partitions[i], broker->rank) && skip-- == 0) {
+                partition_id = i;
+                break;
+            }
+        }
+    }
+
     partition_t *partition = topic_get_partition(topic, partition_id);
 
     if (partition == NULL) {
