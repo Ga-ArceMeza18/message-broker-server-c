@@ -147,34 +147,35 @@ size_t encode_request(const request_t *req, unsigned char *buf, size_t buf_cap)
     return 0;
 
  // Calcula el tamaño total en bytes que ocupará
-    size_t necesario = 4 + PROTO_MAX_TOPIC_LEN + PROTO_MAX_GROUP_LEN + PROTO_MAX_KEY_LEN + 4 * 4 + 8 + 4 + 1 + 4 + req->value_len;
+    size_t necesario = 4 + PROTO_MAX_TOPIC_LEN + PROTO_MAX_GROUP_LEN + PROTO_MAX_KEY_LEN + 5 * 4 + 8 + 4 + 1 + 4 + req->value_len;
 
     if (buf_cap < necesario)
     return 0;
 
     put_int(buf, &pos, (int)req->op);
 
-     memcpy(buf + pos, req->topic, PROTO_MAX_TOPIC_LEN);
-     pos += PROTO_MAX_TOPIC_LEN;
+    memcpy(buf + pos, req->topic, PROTO_MAX_TOPIC_LEN);
+    pos += PROTO_MAX_TOPIC_LEN;
 
-     memcpy(buf + pos, req->group, PROTO_MAX_GROUP_LEN);
-     pos += PROTO_MAX_GROUP_LEN;
+    memcpy(buf + pos, req->group, PROTO_MAX_GROUP_LEN);
+    pos += PROTO_MAX_GROUP_LEN;
 
-     memcpy(buf + pos, req->key, PROTO_MAX_KEY_LEN);
-     pos += PROTO_MAX_KEY_LEN;
+    memcpy(buf + pos, req->key, PROTO_MAX_KEY_LEN);
+    pos += PROTO_MAX_KEY_LEN;
 
     put_int(buf, &pos, req->partitions);
     put_int(buf, &pos, req->replication_factor);
     put_int(buf, &pos, req->broker_id);
     put_int(buf, &pos, req->partition_id);
+    put_int(buf, &pos, req->member_id);
     put_long(buf, &pos, req->offset);
     put_int(buf, &pos, (int)req->acks);
 
     buf[pos++] = req->from_beginning ? 1 : 0;
     
     put_int(buf, &pos, (int)req->value_len);
-     memcpy(buf + pos, req->value, req->value_len);
-     pos += req->value_len;
+    memcpy(buf + pos, req->value, req->value_len);
+    pos += req->value_len;
 
     return pos;
 }
@@ -192,28 +193,29 @@ size_t encode_request(const request_t *req, unsigned char *buf, size_t buf_cap)
     return -1;
 
     // Tamaño mínimo de una petición 
-    size_t minimo = 4 + PROTO_MAX_TOPIC_LEN + PROTO_MAX_GROUP_LEN + PROTO_MAX_KEY_LEN + 4 * 4 + 8 + 4 + 1 + 4;
+    size_t minimo = 4 + PROTO_MAX_TOPIC_LEN + PROTO_MAX_GROUP_LEN + PROTO_MAX_KEY_LEN + 5 * 4 + 8 + 4 + 1 + 4;
    
     if (len < minimo)
     return -1;
 
-     memset(out_req, 0, sizeof(request_t));
+    memset(out_req, 0, sizeof(request_t));
 
     out_req->op = (proto_op_t)get_int(buf, &pos);
 
-     memcpy(out_req->topic, buf + pos, PROTO_MAX_TOPIC_LEN);
-     pos += PROTO_MAX_TOPIC_LEN;
+    memcpy(out_req->topic, buf + pos, PROTO_MAX_TOPIC_LEN);
+    pos += PROTO_MAX_TOPIC_LEN;
 
-     memcpy(out_req->group, buf + pos, PROTO_MAX_GROUP_LEN);
-     pos += PROTO_MAX_GROUP_LEN;
+    memcpy(out_req->group, buf + pos, PROTO_MAX_GROUP_LEN);
+    pos += PROTO_MAX_GROUP_LEN;
 
-     memcpy(out_req->key, buf + pos, PROTO_MAX_KEY_LEN);
-     pos += PROTO_MAX_KEY_LEN;
+    memcpy(out_req->key, buf + pos, PROTO_MAX_KEY_LEN);
+    pos += PROTO_MAX_KEY_LEN;
 
     out_req->partitions = get_int(buf, &pos);
     out_req->replication_factor = get_int(buf, &pos);
     out_req->broker_id = get_int(buf, &pos);
     out_req->partition_id = get_int(buf, &pos);
+    out_req->member_id = get_int(buf, &pos);
     out_req->offset = get_long(buf, &pos);
     out_req->acks = (proto_acks_t)get_int(buf, &pos);
     out_req->from_beginning = buf[pos++] != 0;
@@ -254,13 +256,14 @@ size_t encode_response(const response_t *resp, unsigned char *buf, size_t buf_ca
     return 0;
 
     // Calcula el tamaño total necesario para serializar la respuesta 
-    size_t necesario = 4 + 4 + 8 + 4 + PROTO_MAX_TEXT_INFO + resp->data_len;
+    size_t necesario = 4 + 4 + 4 + 8 + 4 + PROTO_MAX_TEXT_INFO + resp->data_len;
 
     if (buf_cap < necesario)
     return 0;
 
     put_int(buf, &pos, resp->status);
     put_int(buf, &pos, resp->partition_id);
+    put_int(buf, &pos, resp->member_id);
     put_long(buf, &pos, resp->offset);
     put_int(buf, &pos, (int)resp->data_len);
 
@@ -285,7 +288,7 @@ int decode_response(const unsigned char *buf, size_t len, response_t *out_resp)
     return -1;
 
     // Tamaño mínimo de una respuesta
-    size_t minimo = 4 + 4 + 8 + 4 + PROTO_MAX_TEXT_INFO;
+    size_t minimo = 4 + 4 + 4 + 8 + 4 + PROTO_MAX_TEXT_INFO;
 
     if (len < minimo || len > PROTO_MAX_FRAME_BYTES)
     return -1;
@@ -294,6 +297,7 @@ int decode_response(const unsigned char *buf, size_t len, response_t *out_resp)
 
     out_resp->status = get_int(buf, &pos);
     out_resp->partition_id = get_int(buf, &pos);
+    out_resp->member_id = get_int(buf, &pos);
     out_resp->offset = get_long(buf, &pos);
 
     int data_len = get_int(buf, &pos);

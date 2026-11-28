@@ -78,8 +78,17 @@ void log_set_follower(partition_log_t* log);
 // En el líder. La réplica ya tiene todos los mensajes antes de end_offset
 log_status_t log_replica_ack(partition_log_t* log, int replica, long end_offset);
 
+// En el líder. La réplica se reseteó y ya no tiene ningún mensaje
+log_status_t log_replica_reset_progress(partition_log_t *log, int replica, long end_offset);
+
+// En el líder. Devuelve el end_offset de la réplica y si está sincronizada
+log_status_t log_replica_progress(partition_log_t *log, int replica, long *end_offset);
+
 // En el líder. Saca o mete una réplica del conjunto de réplicas sincronizadas
 log_status_t log_set_replica_in_sync(partition_log_t* log, int replica, bool in_sync);
+
+// En el líder. Devuelve true si todas las réplicas están sincronizadas
+bool log_all_replicas_in_sync(partition_log_t *log);
 
 // En una réplica. Actualiza el high watermark con el que mandó el líder
 void log_advance_hw(partition_log_t* log, long high_watermark);

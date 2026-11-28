@@ -3,7 +3,7 @@
 #ifndef GROUP_MEMBER_T_H
 #define GROUP_MEMBER_T_H
 
-typedef struct group_member {
+typedef struct {
     int member_id; // Identificador único del miembro del grupo
     int client_fd; // Descriptor del socket del cliente
     long last_heartbeat; // Último momento en que se recibió actividad o señal de vida del consumidor

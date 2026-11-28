@@ -41,6 +41,7 @@ fprintf(stderr,
         "  consume-join    --topic <nombre> --group <grupo> [--from-beginning]\n"
         "  consume-fetch   --topic <nombre> --group <grupo> [--partition <id>] [--offset <n>]\n"
         "  consume-commit  --topic <nombre> --group <grupo> --partition <id> --offset <n>\n"
+        "  consume-session --topic <nombre> --group <grupo> --partition <id> [--offset <n>]\n"
         "  group-describe  --group <grupo>\n"
         "  broker-pause    --broker-id <id>\n"
         "  broker-resume   --broker-id <id>\n"
@@ -109,59 +110,59 @@ opts->partition_id = -1;
 opts->offset = -1L;
 opts->broker_id = -1;
 
-    for (int i = 1; i < argc; i++) {
-        const char *arg = argv[i];
+for (int i = 1; i < argc; i++) {
+    const char *arg = argv[i];
 
-    if (strcmp(arg, "--host") == 0 && i + 1 < argc) {
-        snprintf(opts->host, sizeof(opts->host), "%s", argv[++i]);
-    } else if (strcmp(arg, "--port") == 0 && i + 1 < argc) {
-        if (!parse_int_arg(argv[++i], &opts->port))
-            return false;
-
-    } else if (strcmp(arg, "--topic") == 0 && i + 1 < argc) {
-        snprintf(opts->topic, sizeof(opts->topic), "%s", argv[++i]);
-    } else if (strcmp(arg, "--group") == 0 && i + 1 < argc) {
-        snprintf(opts->group, sizeof(opts->group), "%s", argv[++i]);
-    } else if (strcmp(arg, "--key") == 0 && i + 1 < argc) {
-        snprintf(opts->key, sizeof(opts->key), "%s", argv[++i]);
-    } else if (strcmp(arg, "--value") == 0 && i + 1 < argc) {
-        snprintf(opts->value, sizeof(opts->value), "%s", argv[++i]);
-    } else if (strcmp(arg, "--partitions") == 0 && i + 1 < argc) {
-        if (!parse_int_arg(argv[++i], &opts->partitions))
-            return false;
-
-    } else if (strcmp(arg, "--replication") == 0 && i + 1 < argc) {
-        if (!parse_int_arg(argv[++i], &opts->replication_factor))
-            return false;
-
-    } else if (strcmp(arg, "--broker-id") == 0 && i + 1 < argc) {
-        if (!parse_int_arg(argv[++i], &opts->broker_id))
-            return false;
-
-    } else if (strcmp(arg, "--partition") == 0 && i + 1 < argc) {
-        if (!parse_int_arg(argv[++i], &opts->partition_id))
-            return false;
-
-    } else if (strcmp(arg, "--offset") == 0 && i + 1 < argc) {
-        if (!parse_long_arg(argv[++i], &opts->offset))
-            return false;
-
-    } else if (strcmp(arg, "--acks") == 0 && i + 1 < argc) {
-        if (!parse_acks(argv[++i], &opts->acks))
-            return false;
-
-    } else if (strcmp(arg, "--from-beginning") == 0) {
-        opts->from_beginning = true;
-    } else if (arg[0] == '-') {
+if (strcmp(arg, "--host") == 0 && i + 1 < argc) {
+    snprintf(opts->host, sizeof(opts->host), "%s", argv[++i]);
+} else if (strcmp(arg, "--port") == 0 && i + 1 < argc) {
+    if (!parse_int_arg(argv[++i], &opts->port))
         return false;
 
-    } else if (opts->cmd[0] == '\0') {
-        snprintf(opts->cmd, sizeof(opts->cmd), "%s", arg);
-
-    } else {
+} else if (strcmp(arg, "--topic") == 0 && i + 1 < argc) {
+    snprintf(opts->topic, sizeof(opts->topic), "%s", argv[++i]);
+} else if (strcmp(arg, "--group") == 0 && i + 1 < argc) {
+    snprintf(opts->group, sizeof(opts->group), "%s", argv[++i]);
+} else if (strcmp(arg, "--key") == 0 && i + 1 < argc) {
+    snprintf(opts->key, sizeof(opts->key), "%s", argv[++i]);
+} else if (strcmp(arg, "--value") == 0 && i + 1 < argc) {
+    snprintf(opts->value, sizeof(opts->value), "%s", argv[++i]);
+} else if (strcmp(arg, "--partitions") == 0 && i + 1 < argc) {
+    if (!parse_int_arg(argv[++i], &opts->partitions))
         return false;
 
-    }
+} else if (strcmp(arg, "--replication") == 0 && i + 1 < argc) {
+    if (!parse_int_arg(argv[++i], &opts->replication_factor))
+        return false;
+
+} else if (strcmp(arg, "--broker-id") == 0 && i + 1 < argc) {
+    if (!parse_int_arg(argv[++i], &opts->broker_id))
+        return false;
+
+} else if (strcmp(arg, "--partition") == 0 && i + 1 < argc) {
+    if (!parse_int_arg(argv[++i], &opts->partition_id))
+        return false;
+
+} else if (strcmp(arg, "--offset") == 0 && i + 1 < argc) {
+    if (!parse_long_arg(argv[++i], &opts->offset))
+        return false;
+
+} else if (strcmp(arg, "--acks") == 0 && i + 1 < argc) {
+    if (!parse_acks(argv[++i], &opts->acks))
+        return false;
+
+} else if (strcmp(arg, "--from-beginning") == 0) {
+    opts->from_beginning = true;
+} else if (arg[0] == '-') {
+    return false;
+
+} else if (opts->cmd[0] == '\0') {
+    snprintf(opts->cmd, sizeof(opts->cmd), "%s", arg);
+
+} else {
+    return false;
+
+}
 
   }
 
@@ -257,69 +258,159 @@ return true;
 // Imprime los campos de la respuesta recibida del broker 
 static void print_response(const response_t *resp)
 {
-printf("status=%d (%s) partition=%d offset=%ld\n",
-    resp->status,
-    resp->status == PROTO_STATUS_OK ? "OK" : "ERR",
-    resp->partition_id,
-    resp->offset);
+    printf("status=%d (%s) partition=%d offset=%ld\n",
+        resp->status,
+        resp->status == PROTO_STATUS_OK ? "OK" : "ERR",
+        resp->partition_id,
+        resp->offset);
 
-if (resp->text_info[0] != '\0') {
-  
- printf("info: %s\n", resp->text_info);
-}
-
-if (resp->data_len > 0) {
- printf("payload (%zu bytes): ", resp->data_len);
-  for (size_t i = 0; i < resp->data_len; i++) {
-     unsigned char c = resp->payload[i];
-     putchar(isprint(c) ? (int)c : '.');
+    if (resp->text_info[0] != '\0') {
+    
+    printf("info: %s\n", resp->text_info);
     }
 
-    putchar('\n');
+    if (resp->data_len > 0) {
+    printf("payload (%zu bytes): ", resp->data_len);
+    for (size_t i = 0; i < resp->data_len; i++) {
+        unsigned char c = resp->payload[i];
+        putchar(isprint(c) ? (int)c : '.');
+        }
 
+        putchar('\n');
+
+    }
 }
+
+
+static int run_consume_session(int fd, const cli_opts_t *opts) {
+    if (opts->topic[0] == '\0' || opts->group[0] == '\0' || opts->partition_id < 0) {
+        fprintf(stderr, "Se requieren --topic, --group y --partition\n");
+        return -1;
+    }
+
+    request_t req = {0};
+    response_t resp = {0};
+
+    req.op = PROTO_OP_CONSUME_JOIN;
+    snprintf(req.topic, sizeof(req.topic), "%s", opts->topic);
+    snprintf(req.group, sizeof(req.group), "%s", opts->group);
+    req.acks = PROTO_ACKS_LEADER;
+
+    if (proto_send_request(fd, &req) != 0 || proto_recv_response(fd, &resp) != 0) {
+        fprintf(stderr, "Error durante JOIN\n");
+        return -1;
+    }
+
+    print_response(&resp);
+
+    if (resp.status != PROTO_STATUS_OK || resp.member_id <= 0) {
+        return -1;
+    }
+
+    int member_id = resp.member_id;
+
+    memset(&req, 0, sizeof(req));
+    req.op = PROTO_OP_CONSUME_FETCH;
+    snprintf(req.topic, sizeof(req.topic), "%s", opts->topic);
+    snprintf(req.group, sizeof(req.group), "%s", opts->group);
+    req.member_id = member_id;
+    req.partition_id = opts->partition_id;
+    req.offset = opts->offset;
+    req.from_beginning = opts->from_beginning;
+    req.acks = PROTO_ACKS_LEADER;
+
+    if (proto_send_request(fd, &req) != 0 || proto_recv_response(fd, &resp) != 0) {
+        fprintf(stderr, "Error durante FETCH\n");
+        return -1;
+    }
+
+    print_response(&resp);
+
+    if (resp.status != PROTO_STATUS_OK) {
+        return -1;
+    }
+
+    if (resp.data_len == 0) {
+        printf("No hay mensaje para confirmar\n");
+        return 0;
+    }
+
+    long fetched_offset = resp.offset;
+
+    memset(&req, 0, sizeof(req));
+    req.op = PROTO_OP_CONSUME_COMMIT;
+    snprintf(req.topic, sizeof(req.topic), "%s", opts->topic);
+    snprintf(req.group, sizeof(req.group), "%s", opts->group);
+    req.member_id = member_id;
+    req.partition_id = opts->partition_id;
+    req.offset = fetched_offset;
+    req.acks = PROTO_ACKS_LEADER;
+
+    if (proto_send_request(fd, &req) != 0 || proto_recv_response(fd, &resp) != 0) {
+        fprintf(stderr, "Error durante COMMIT\n");
+        return -1;
+    }
+
+    print_response(&resp);
+
+    return resp.status == PROTO_STATUS_OK ? 0 : -1;
 }
+
 
 int main(int argc, char **argv)
 {
-cli_opts_t opts;
-if (!parse_args(argc, argv, &opts)) {
-  print_usage(argv[0]);
+    cli_opts_t opts;
+    if (!parse_args(argc, argv, &opts)) {
+        print_usage(argv[0]);
 
-  return EXIT_FAILURE;
-}
-
-request_t req;
- if (!build_request(&opts, &req)) {
-    print_usage(argv[0]);
-
-return EXIT_FAILURE;
-}
-
-int fd = proto_connect(opts.host, opts.port);
-if (fd < 0) {
-  perror("proto_connect");
-
-return EXIT_FAILURE;
+        return EXIT_FAILURE;
     }
 
-if (proto_send_request(fd, &req) < 0) {
- fprintf(stderr, "Error enviando solicitud al broker\n");
- close(fd);
+    if (strcmp(opts.cmd, "consume-session") == 0) {
+        int fd = proto_connect(opts.host, opts.port);
 
-return EXIT_FAILURE;
-}
+        if (fd < 0) {
+            perror("proto_connect");
+            return EXIT_FAILURE;
+        }
 
-response_t resp;
-if (proto_recv_response(fd, &resp) < 0) {
-  fprintf(stderr, "Error recibiendo respuesta del broker\n");
- close(fd);
+        int result = run_consume_session(fd, &opts);
+        close(fd);
 
-return EXIT_FAILURE;
-}
+        return result == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
+    }
 
-close(fd);
-print_response(&resp);
+    request_t req;
+    if (!build_request(&opts, &req)) {
+        print_usage(argv[0]);
 
-return (resp.status == PROTO_STATUS_OK) ? EXIT_SUCCESS : EXIT_FAILURE;
+        return EXIT_FAILURE;
+    }
+
+    int fd = proto_connect(opts.host, opts.port);
+    if (fd < 0) {
+        perror("proto_connect");
+
+        return EXIT_FAILURE;
+    }
+
+    if (proto_send_request(fd, &req) < 0) {
+        fprintf(stderr, "Error enviando solicitud al broker\n");
+        close(fd);
+
+        return EXIT_FAILURE;
+    }
+
+    response_t resp;
+    if (proto_recv_response(fd, &resp) < 0) {
+        fprintf(stderr, "Error recibiendo respuesta del broker\n");
+        close(fd);
+
+        return EXIT_FAILURE;
+    }
+
+    close(fd);
+    print_response(&resp);
+
+    return (resp.status == PROTO_STATUS_OK) ? EXIT_SUCCESS : EXIT_FAILURE;
 }

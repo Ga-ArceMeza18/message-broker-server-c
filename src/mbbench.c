@@ -93,18 +93,16 @@ static bool parse_acks(const char *s, proto_acks_t *out)
 //Convierte una cadena a entero positivo 
 static bool parse_pos_int(const char *s, int *out)
 {
-if (s == NULL || s[0] == '\0')
-    return false;
+    if (s == NULL || s[0] == '\0')
+        return false;
 
     char *end = NULL;
     long v = strtol(s, &end, 10);
-
-if (*end != '\0' || v <= 0 || v > 10000000)
-    return false;
+    if (*end != '\0' || v <= 0 || v > 10000000)
+        return false;
 
     *out = (int)v;
-
-return true;
+    return true;
 }
 
 // Lee y valida los argumentos de linea de comandos
@@ -201,36 +199,44 @@ static void *worker_routine(void *arg)
         // Arma el mensaje PROTO_OP_PRODUCE 
         fill_produce_request(&req, cfg, st->thread_id, i);
 
-    // Guarda el tiempo inicial en microsegundos antes de enviar la petición
-    double t0 = now_ms();
+        // Guarda el tiempo inicial en microsegundos antes de enviar la petición
+        double t0 = now_ms();
 
         // Envía la petición y espera la respuesta
         if (proto_send_request(fd, &req) < 0 || proto_recv_response(fd, &resp) < 0) {
-            st->err_count++; //suma error
-            
-        continue;
+            st->err_count += cfg->messages_per_thread - i;
+            break;
         }
 
-    // Calcula cuánto tardó el ciclo completo de envío + respuesta en milisegundos
-    double elapsed = now_ms() - t0;
+        // Calcula cuánto tardó el ciclo completo de envío + respuesta en milisegundos
+        double elapsed = now_ms() - t0;
 
-    // Acumula la latencia 
-    st->total_latency_ms += elapsed;
+        // Acumula la latencia 
+        st->total_latency_ms += elapsed;
 
-     // Actualiza la latencia máxima
-    if (elapsed > st->max_latency_ms) {
-            st->max_latency_ms = elapsed;
-    }
-    // Guarda la muestra en el arreglo del hilo para calcular p50 y p99 después
-    if (st->latencies_ms != NULL && st->recorded_count < cfg->messages_per_thread) {
-        st->latencies_ms[st->recorded_count++] = elapsed;
-    }
+        // Actualiza la latencia máxima
+        if (elapsed > st->max_latency_ms) {
+                st->max_latency_ms = elapsed;
+        }
+        // Guarda la muestra en el arreglo del hilo para calcular p50 y p99 después
+        if (st->latencies_ms != NULL && st->recorded_count < cfg->messages_per_thread) {
+            st->latencies_ms[st->recorded_count++] = elapsed;
+        }
 
-    // Revisa si el broker respondió OK o error 
-    if (resp.status == PROTO_STATUS_OK) {
-        st->ok_count++;
-    } else {
-        st->err_count++;
+        // Revisa si el broker respondió OK o error 
+        if (resp.status == PROTO_STATUS_OK) {
+            st->ok_count++;
+            st->total_latency_ms += elapsed;
+
+            if (elapsed > st->max_latency_ms) {
+                st->max_latency_ms = elapsed;
+            }
+
+            if (st->latencies_ms != NULL && st->recorded_count < cfg->messages_per_thread) {
+                st->latencies_ms[st->recorded_count++] = elapsed;
+            }
+        } else {
+            st->err_count++;
         }
 
     }
